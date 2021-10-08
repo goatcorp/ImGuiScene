@@ -30,6 +30,7 @@
     <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="FodyWeavers.xml"/>
     <AdditionalFiles Include="natives\stbi.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>stbi.dll</TargetPath>
@@ -46,6 +47,8 @@
     <ProjectReference Include="..\deps\SDL2-CS\SDL2-CS.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Costura.Fody" Version="5.6.0"/>
+    <PackageReference Include="Fody" Version="6.5.3"/>
     <PackageReference Include="PInvoke.DwmApi" Version="0.7.104" />
     <PackageReference Include="PInvoke.Kernel32" Version="0.7.104" />
     <PackageReference Include="PInvoke.User32" Version="0.7.104" />
