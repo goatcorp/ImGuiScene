@@ -7,6 +7,7 @@ using SharpDX.DXGI;
 using StbiSharp;
 using System;
 using System.IO;
+using ImGuiScene.ImGui_Impl.Native;
 using ImGuizmoNET;
 using ImPlotNET;
 using Device = SharpDX.Direct3D11.Device;
@@ -33,7 +34,7 @@ namespace ImGuiScene
         private int targetWidth;
         private int targetHeight;
 
-        private ImGui_Impl_DX11 imguiRenderer;
+        private ImGui_ImplDX11_Native imguiRenderer;
         private ImGui_Input_Impl_Direct imguiInput;
 
         public delegate void BuildUIDelegate();
@@ -103,7 +104,7 @@ namespace ImGuiScene
 
         private void InitializeImGui()
         {
-            this.imguiRenderer = new ImGui_Impl_DX11();
+            this.imguiRenderer = new ImGui_ImplDX11_Native();
 
             var ctx = ImGui.CreateContext();
             ImGuizmo.SetImGuiContext(ctx);
@@ -173,6 +174,7 @@ namespace ImGuiScene
         // to OnNewRenderFrame
         public void InvalidateFonts()
         {
+            // TODO
             this.imguiRenderer.RebuildFontTexture();
         }
 
