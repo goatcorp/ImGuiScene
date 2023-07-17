@@ -353,8 +353,13 @@ namespace ImGuiScene
                             // Submit key event
                             var key = VirtualKeyToImGuiKey((int)vk);
                             var scancode = ((int)lParam & 0xff0000) >> 16;
+                            AddKeyEvent(key, isKeyDown, vk, scancode);
                             if (key != ImGuiKey.None && io.WantTextInput) {
-                                AddKeyEvent(key, isKeyDown, vk, scancode);
+                                return IntPtr.Zero;
+                            }
+
+                            if (io.WantCaptureKeyboard)
+                            {
                                 return IntPtr.Zero;
                             }
                             
@@ -381,6 +386,10 @@ namespace ImGuiScene
                         if (io.WantTextInput)
                         {
                             io.AddInputCharacter((uint)wParam);
+                            return IntPtr.Zero;
+                        }
+                        if (io.WantCaptureKeyboard)
+                        {
                             return IntPtr.Zero;
                         }
                         break;
@@ -463,9 +472,7 @@ namespace ImGuiScene
                     // Skip raising modifier keys if the game is focused.
                     // This allows us to raise the keys when one is held and the window becomes unfocused,
                     // but if we do not skip them, they will only be held down every 4th frame or so.
-                    if (User32.GetForegroundWindow() == this._hWnd &&
-                        (IsGamepadKey((ImGuiKey) i) ||
-                        IsModKey((ImGuiKey) i)))
+                    if (User32.GetForegroundWindow() == this._hWnd)
                         continue;
                     io.AddKeyEvent((ImGuiKey) i, false);
                 }
