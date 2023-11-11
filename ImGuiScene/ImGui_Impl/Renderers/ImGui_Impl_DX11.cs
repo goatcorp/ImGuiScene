@@ -6,6 +6,7 @@ using SharpDX.DXGI;
 using SharpDX.Mathematics.Interop;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -26,6 +27,7 @@ namespace ImGuiScene
     /// </summary>
     public unsafe class ImGui_Impl_DX11 : IImGuiRenderer
     {
+        private readonly Dictionary<nint, IImGuiRenderer.DrawCmdUserCallbackDelegate> _drawCallbacks = new();
         private IntPtr _renderNamePtr;
         private Device _device;
         private DeviceContext _deviceContext;
@@ -45,6 +47,8 @@ namespace ImGuiScene
         private VertexBufferBinding _vertexBinding;
         // so we don't make a temporary object every frame
         private RawColor4 _blendColor = new RawColor4(0, 0, 0, 0);
+
+        public nint ResetDrawCmdUserCallback { get; private set; }
 
         // TODO: I'll clean this up better later
         private class StateBackup : IDisposable
@@ -426,22 +430,30 @@ namespace ImGuiScene
                 for (int cmd = 0; cmd < cmdList.CmdBuffer.Size; cmd++)
                 {
                     var pcmd = cmdList.CmdBuffer[cmd];
-                    if (pcmd.UserCallback != IntPtr.Zero)
-                    {
-                        // TODO
-                        throw new NotImplementedException();
-                    }
-                    else
+
+                    if (pcmd.UserCallback == IntPtr.Zero)
                     {
                         // Apply scissor/clipping rectangle
                         _deviceContext.Rasterizer.SetScissorRectangle((int)(pcmd.ClipRect.X - clipOff.X), (int)(pcmd.ClipRect.Y - clipOff.Y), (int)(pcmd.ClipRect.Z - clipOff.X), (int)(pcmd.ClipRect.W - clipOff.Y));
 
                         // Bind texture, Draw
-                        // TODO: might be nice to store samplers for loaded textures so that we can look them up and apply them here
-                        // rather than just always using the font sampler
-                        var textureSrv = ShaderResourceView.FromPointer<ShaderResourceView>(pcmd.TextureId);
+                        var textureSrv = CppObject.FromPointer<ShaderResourceView>(pcmd.TextureId);
                         _deviceContext.PixelShader.SetShaderResource(0, textureSrv);
                         _deviceContext.DrawIndexed((int)pcmd.ElemCount, (int)(pcmd.IdxOffset + indexOffset), (int)(pcmd.VtxOffset + vertexOffset));
+                    }
+                    else if (_drawCallbacks.TryGetValue(pcmd.UserCallback, out var cb))
+                    {
+                        // Use custom callback
+                        cb(drawData, pcmd);
+                    }
+                    else
+                    {
+                        Debug.WriteLine(
+                            $"[{nameof(ImGui_Impl_DX11)})] " +
+                            $"((ImDrawData*)0x{(ulong) drawData.NativePtr:X})" +
+                            $"->CmdLists[{n}]" +
+                            $"->CmdBuffer[{cmd}]" +
+                            $".UserCallback (0x{pcmd.UserCallback}:X) is not registered for use.");
                     }
                 }
 
@@ -685,6 +697,7 @@ namespace ImGuiScene
 
             _device = (Device)initParams[0];
             _deviceContext = (DeviceContext)initParams[1];
+            ResetDrawCmdUserCallback = AddDrawCmdUserCallback((drawData, _) => SetupRenderState(drawData));
 
             InitPlatformInterface();
 
@@ -712,6 +725,27 @@ namespace ImGuiScene
             if (_fontSampler == null)
             {
                 CreateDeviceObjects();
+            }
+        }
+
+        public nint AddDrawCmdUserCallback(IImGuiRenderer.DrawCmdUserCallbackDelegate @delegate)
+        {
+            if (this._drawCallbacks.FirstOrDefault(x => x.Value == @delegate).Key is not 0 and var key)
+                return key;
+
+            key = Marshal.GetFunctionPointerForDelegate(@delegate);
+            this._drawCallbacks.Add(key, @delegate);
+            return key;
+        }
+
+        public void RemoveDrawCmdUserCallback(IImGuiRenderer.DrawCmdUserCallbackDelegate @delegate)
+        {
+            foreach (var key in this._drawCallbacks
+                                    .Where(x => x.Value == @delegate)
+                                    .Select(x => x.Key)
+                                    .ToArray())
+            {
+                this._drawCallbacks.Remove(key);
             }
         }
 

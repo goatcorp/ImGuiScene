@@ -19,6 +19,7 @@ namespace ImGuiScene
     public sealed class RawDX11Scene : IDisposable
     {
         public Device Device { get; private set; }
+        public DeviceContext DeviceContext { get; private set; }
         public IntPtr WindowHandlePtr { get; private set; }
         public SwapChain SwapChain { get; private set; }
 
@@ -28,7 +29,6 @@ namespace ImGuiScene
             set => this.imguiInput.UpdateCursor = value;
         }
 
-        private DeviceContext deviceContext;
         private RenderTargetView rtv;
 
         private int targetWidth;
@@ -84,9 +84,11 @@ namespace ImGuiScene
             Initialize();
         }
 
+        public IImGuiRenderer Renderer => this.imguiRenderer;
+
         private void Initialize()
         {
-            this.deviceContext = this.Device.ImmediateContext;
+            this.DeviceContext = this.Device.ImmediateContext;
 
             using (var backbuffer = this.SwapChain.GetBackBuffer<Texture2D>(0))
             {
@@ -113,7 +115,7 @@ namespace ImGuiScene
 
             ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable | ImGuiConfigFlags.ViewportsEnable;
 
-            this.imguiRenderer.Init(this.Device, this.deviceContext);
+            this.imguiRenderer.Init(this.Device, this.DeviceContext);
             this.imguiInput = new ImGui_Input_Impl_Direct(WindowHandlePtr);
         }
 
@@ -131,7 +133,7 @@ namespace ImGuiScene
 
         public void Render()
         {
-            this.deviceContext.OutputMerger.SetRenderTargets(this.rtv);
+            this.DeviceContext.OutputMerger.SetRenderTargets(this.rtv);
 
             this.imguiRenderer.NewFrame();
             this.OnNewRenderFrame?.Invoke();
@@ -146,14 +148,14 @@ namespace ImGuiScene
             ImGui.Render();
 
             this.imguiRenderer.RenderDrawData(ImGui.GetDrawData());
-            this.deviceContext.OutputMerger.SetRenderTargets((RenderTargetView)null);
+            this.DeviceContext.OutputMerger.SetRenderTargets((RenderTargetView)null);
             ImGui.UpdatePlatformWindows();
             ImGui.RenderPlatformWindowsDefault();
         }
 
         public void OnPreResize()
         {
-            this.deviceContext.OutputMerger.SetRenderTargets((RenderTargetView)null);
+            this.DeviceContext.OutputMerger.SetRenderTargets((RenderTargetView)null);
 
             this.rtv?.Dispose();
             this.rtv = null;
@@ -276,7 +278,7 @@ namespace ImGuiScene
 
                 using (var tex = new Texture2D(this.Device, desc))
                 {
-                    this.deviceContext.CopyResource(backBuffer, tex);
+                    this.DeviceContext.CopyResource(backBuffer, tex);
                     using (var surf = tex.QueryInterface<Surface>())
                     {
                         var map = surf.Map(SharpDX.DXGI.MapFlags.Read, out DataStream dataStream);
