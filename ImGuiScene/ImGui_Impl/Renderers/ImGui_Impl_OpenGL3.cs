@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -18,6 +21,7 @@ namespace ImGuiScene
     {
         private static GL Gl = Util.Gl;
 
+        private readonly Dictionary<nint, IImGuiRenderer.DrawCmdUserCallbackDelegate> _drawCallbacks = new();
         private IntPtr _renderNamePtr;
         private uint _vertHandle;
         private uint _fragHandle;
@@ -31,6 +35,8 @@ namespace ImGuiScene
         private uint _elementsHandle;
         private uint _fontTexture;
         private uint _vertexArrayObject;
+
+        public nint ResetDrawCmdUserCallback { get; private set; }
 
         public void RenderDrawData(ImDrawDataPtr drawData)
         {
@@ -98,12 +104,7 @@ namespace ImGuiScene
                 for (var i = 0; i < cmdList.CmdBuffer.Size; i++)
                 {
                     var pcmd = cmdList.CmdBuffer[i];
-                    if (pcmd.UserCallback != IntPtr.Zero)
-                    {
-                        // TODO
-                        throw new NotImplementedException();
-                    }
-                    else
+                    if (pcmd.UserCallback == IntPtr.Zero)
                     {
                         // Project scissor/clipping rectangles into framebuffer space
                         var clipRect = new Vector4
@@ -122,6 +123,23 @@ namespace ImGuiScene
                             // Bind texture, Draw
                             Gl.BindTexture(TextureTarget.Texture2D, (uint)pcmd.TextureId);
                             Gl.DrawElementsBaseVertex(PrimitiveType.Triangles, pcmd.ElemCount, DrawElementsType.UnsignedShort, (IntPtr)(pcmd.IdxOffset * sizeof(short)), (int)pcmd.VtxOffset);
+                        }
+                    }
+                    else if (_drawCallbacks.TryGetValue(pcmd.UserCallback, out var cb))
+                    {
+                        // Use custom callback
+                        cb(drawData, pcmd);
+                    }
+                    else
+                    {
+                        unsafe
+                        {
+                            Debug.WriteLine(
+                                $"[{nameof(ImGui_Impl_DX11)})] " +
+                                $"((ImDrawData*)0x{(ulong) drawData.NativePtr:X})" +
+                                $"->CmdLists[{n}]" +
+                                $"->CmdBuffer[{i}]" +
+                                $".UserCallback (0x{pcmd.UserCallback}:X) is not registered for use.");
                         }
                     }
                 }
@@ -188,6 +206,8 @@ namespace ImGuiScene
                 io.NativePtr->BackendRendererName = (byte*)_renderNamePtr.ToPointer();
             }
 
+            ResetDrawCmdUserCallback = AddDrawCmdUserCallback((drawData, _) => SetupRenderState(drawData));
+
             // literally nothing else in the source implementation of this function is useful
         }
 
@@ -207,6 +227,27 @@ namespace ImGuiScene
             if (_shaderHandle == 0)
             {
                 CreateDeviceObjects();
+            }
+        }
+
+        public nint AddDrawCmdUserCallback(IImGuiRenderer.DrawCmdUserCallbackDelegate @delegate)
+        {
+            if (this._drawCallbacks.FirstOrDefault(x => x.Value == @delegate).Key is not 0 and var key)
+                return key;
+
+            key = Marshal.GetFunctionPointerForDelegate(@delegate);
+            this._drawCallbacks.Add(key, @delegate);
+            return key;
+        }
+
+        public void RemoveDrawCmdUserCallback(IImGuiRenderer.DrawCmdUserCallbackDelegate @delegate)
+        {
+            foreach (var key in this._drawCallbacks
+                                    .Where(x => x.Value == @delegate)
+                                    .Select(x => x.Key)
+                                    .ToArray())
+            {
+                this._drawCallbacks.Remove(key);
             }
         }
 
