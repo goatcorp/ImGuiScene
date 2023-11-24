@@ -11,6 +11,7 @@ using ImGuiScene.ImGui_Impl.Native;
 using ImGuiScene.ImGui_Impl;
 using ImGuizmoNET;
 using ImPlotNET;
+
 using Device = SharpDX.Direct3D11.Device;
 
 namespace ImGuiScene
@@ -263,7 +264,7 @@ namespace ImGuiScene
 
             // no sampler for now because the ImGui implementation we copied doesn't allow for changing it
 
-            return new D3DTextureWrap(resView, width, height);
+            return new D3D11TextureWrap(resView, width, height);
         }
 
         public byte[] CaptureScreenshot()

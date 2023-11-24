@@ -51,6 +51,7 @@
     <PackageReference Include="PInvoke.User32" Version="0.7.104" />
     <PackageReference Include="PInvoke.Win32" Version="0.7.104" />
     <PackageReference Include="SharpDX.Direct3D11" Version="4.2.0" />
+    <PackageReference Include="SharpDX.Direct3D12" Version="4.2.0" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
     <PackageReference Include="Silk.NET.OpenGL" Version="2.4.0" />
     <PackageReference Include="Silk.NET.Windowing" Version="2.4.0" />
