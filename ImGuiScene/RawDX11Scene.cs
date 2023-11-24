@@ -8,6 +8,7 @@ using StbiSharp;
 using System;
 using System.IO;
 using ImGuiScene.ImGui_Impl.Native;
+using ImGuiScene.ImGui_Impl;
 using ImGuizmoNET;
 using ImPlotNET;
 using Device = SharpDX.Direct3D11.Device;
@@ -176,6 +177,12 @@ namespace ImGuiScene
         {
             // TODO
             this.imguiRenderer.RebuildFontTexture();
+        }
+
+        // It is pretty much required that this is called from a handler attached
+        // to OnNewRenderFrame
+        public void ClearStacksOnContext() {
+            Custom.igCustom_ClearStacks();
         }
 
         public bool IsImGuiCursor(IntPtr hCursor)
