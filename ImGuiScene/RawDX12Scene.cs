@@ -6,6 +6,7 @@ using StbiSharp;
 using System;
 using System.ComponentModel;
 using System.IO;
+using ImGuiScene.ImGui_Impl;
 using ImGuiScene.ImGui_Impl.Native;
 using ImGuizmoNET;
 using ImPlotNET;
@@ -159,8 +160,7 @@ namespace ImGuiScene {
         // It is pretty much required that this is called from a handler attached
         // to OnNewRenderFrame
         public void ClearStacksOnContext() {
-            // TODO: Crashes. I don't think this should be used here.
-            // Custom.igCustom_ClearStacks();
+            Custom.igCustom_ClearStacks();
         }
 
         public bool IsImGuiCursor(IntPtr hCursor) {
@@ -268,8 +268,7 @@ namespace ImGuiScene {
             this.imguiRenderer?.Shutdown();
             this.imguiInput?.Dispose();
 
-            // TODO: Crashes. Possible double free?
-            // ImGui.DestroyContext();
+            ImGui.DestroyContext();
 
             this.imguiRenderer?.Dispose();
 
