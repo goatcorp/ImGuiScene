@@ -170,7 +170,7 @@ namespace ImGuiScene
 
             // no sampler for now because the ImGui implementation we copied doesn't allow for changing it
 
-            return new D3DTextureWrap(resView, width, height);
+            return new D3D11TextureWrap(resView, width, height);
         }
 
         #region ImGui forwarding
