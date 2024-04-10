@@ -443,6 +443,7 @@ namespace ImGuiScene
                         _textureSrv.NativePointer = pcmd.TextureId;
                         _deviceContext.PixelShader.SetShaderResource(0, _textureSrv);
                         _deviceContext.DrawIndexed((int)pcmd.ElemCount, (int)(pcmd.IdxOffset + indexOffset), (int)(pcmd.VtxOffset + vertexOffset));
+                        _textureSrv.NativePointer = IntPtr.Zero;
                     }
                 }
 
